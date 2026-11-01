@@ -8,6 +8,8 @@
 // SPIKE (q2 EXR-16 S1): where do Positron's cell parser and content hash disagree with q2's?
 // Experiment code: it records observations; only the hash vectors with known q2 values assert.
 
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { URI } from '../../../../../base/common/uri.js';
 import { StringSHA1 } from '../../../../../base/common/hash.js';
 import { createTestContainer } from '../../../../../test/vitest/positronTestContainer.js';
@@ -71,4 +73,35 @@ describe('q2 conformance (S1 spike)', () => {
 			console.log(`S1 ${name} => ${JSON.stringify(cells)}`);
 		});
 	}
+	// q2's generated fixtures (crates/quarto-core/tests/fixtures/positron-conformance).
+	// Q2_POSITRON_FIXTURES: absolute path of that directory.
+	// Q2_POSITRON_OBSERVED_OUT (optional): write what Positron observed, as JSON, to this file.
+	it('q2 fixtures: ids and hashes versus q2 expectations', () => {
+		const dir = process.env.Q2_POSITRON_FIXTURES;
+		if (!dir) {
+			throw new Error('Set Q2_POSITRON_FIXTURES to the absolute path of crates/quarto-core/tests/fixtures/positron-conformance');
+		}
+		const observed: Record<string, unknown> = {};
+		for (const file of readdirSync(dir).filter(f => f.endsWith('.qmd')).sort()) {
+			const name = file.slice(0, -4);
+			const content = readFileSync(join(dir, file), 'utf8');
+			const textModel = createTextModel(content, null, undefined, URI.file('/s1.qmd'));
+			ctx.disposables.add(textModel);
+			const model = new QuartoDocumentModel(textModel, logService, startup);
+			ctx.disposables.add(model);
+			observed[name] = model.cells.map(c => ({
+				id: c.id, language: c.language, label: c.label, content_hash: c.contentHash, line: c.startLine,
+			}));
+		}
+		const out = process.env.Q2_POSITRON_OBSERVED_OUT;
+		if (out) {
+			writeFileSync(out, JSON.stringify(observed, null, 1) + '\n');
+		}
+		expect(Object.keys(observed).length).toBeGreaterThan(0);
+		// Positron's side as recorded in q2's positron-expected.json (cells only).
+		const expected = JSON.parse(readFileSync(join(dir, 'positron-expected.json'), 'utf8')) as Record<string, { cells: unknown }>;
+		for (const name of Object.keys(observed)) {
+			expect(observed[name], `case ${name}`).toEqual(expected[name].cells);
+		}
+	});
 });
