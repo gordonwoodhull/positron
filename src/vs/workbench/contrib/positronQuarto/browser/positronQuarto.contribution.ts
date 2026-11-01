@@ -54,6 +54,11 @@ import '../common/positronQuartoConfig.js';
 
 // Import commands to ensure they're registered
 import './quartoCommands.js';
+// --- Start Positron ---
+// Spike S3 (q2 interop): inline expression execution
+import './quartoInlineExprCommands.js';
+import './media/quartoInlineExprSpike.css';
+// --- End Positron ---
 import './quartoEmbeddedFormatting.js';
 
 // Import editor action bar menu wiring to ensure it's registered
