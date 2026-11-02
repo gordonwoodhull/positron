@@ -13,7 +13,7 @@ import { ServicesAccessor } from '../../../../platform/instantiation/common/inst
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
-import { IEditorService, SIDE_GROUP } from '../../../services/editor/common/editorService.js';
+import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { isCodeEditor } from '../../../../editor/browser/editorBrowser.js';
 import { IModelDeltaDecoration, TrackedRangeStickiness } from '../../../../editor/common/model.js';
 import { Range } from '../../../../editor/common/core/range.js';
@@ -97,9 +97,7 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 		});
 		const collection = editor.createDecorationsCollection(decorations);
 		const report = `[spike S3] mode=${mode} spans=${runs.length} total=${Date.now() - t0}ms decorations=${collection.length} uri=${textModel.uri.toString()} firstRange=${collection.getRange(0)?.toString()}\n${runs.map(describeRun).join('\n')}`;
-		notify.info(`[spike S3] done: ${runs.length} span(s) in ${Date.now() - t0}ms, ${collection.length} decoration(s); report opened in a new editor`);
+		notify.info(`[spike S3] done: ${runs.length} span(s) in ${Date.now() - t0}ms, ${collection.length} decoration(s)`);
 		log.info(report);
-		// The Positron log is hard to find in a dev build, so also show the report as text.
-		await editorService.openEditor({ resource: undefined, contents: report, languageId: 'plaintext' }, SIDE_GROUP);
 	}
 });
