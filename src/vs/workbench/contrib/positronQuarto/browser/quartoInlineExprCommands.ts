@@ -41,7 +41,8 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 	}
 
 	async run(accessor: ServicesAccessor): Promise<void> {
-		const editor = accessor.get(IEditorService).activeTextEditorControl;
+		const editorService = accessor.get(IEditorService);
+		const editor = editorService.activeTextEditorControl;
 		const quickInput = accessor.get(IQuickInputService);
 		const kernelManager = accessor.get(IQuartoKernelManager);
 		const modelService = accessor.get(IQuartoDocumentModelService);
@@ -93,8 +94,11 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 				},
 			};
 		});
-		editor.createDecorationsCollection(decorations);
-		notify.info(`[spike S3] done: ${runs.length} span(s) in ${Date.now() - t0}ms`);
-		log.info(`[spike S3] mode=${mode} spans=${runs.length} total=${Date.now() - t0}ms\n${runs.map(describeRun).join('\n')}`);
+		const collection = editor.createDecorationsCollection(decorations);
+		const report = `[spike S3] mode=${mode} spans=${runs.length} total=${Date.now() - t0}ms decorations=${collection.length}\n${runs.map(describeRun).join('\n')}`;
+		notify.info(`[spike S3] done: ${runs.length} span(s) in ${Date.now() - t0}ms, ${collection.length} decoration(s); report opened in a new editor`);
+		log.info(report);
+		// The Positron log is hard to find in a dev build, so also show the report as text.
+		await editorService.openEditor({ resource: undefined, contents: report, languageId: 'plaintext' });
 	}
 });
