@@ -13,7 +13,7 @@ import { ServicesAccessor } from '../../../../platform/instantiation/common/inst
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
-import { IEditorService } from '../../../services/editor/common/editorService.js';
+import { IEditorService, SIDE_GROUP } from '../../../services/editor/common/editorService.js';
 import { isCodeEditor } from '../../../../editor/browser/editorBrowser.js';
 import { IModelDeltaDecoration, TrackedRangeStickiness } from '../../../../editor/common/model.js';
 import { Range } from '../../../../editor/common/core/range.js';
@@ -100,6 +100,6 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 		notify.info(`[spike S3] done: ${runs.length} span(s) in ${Date.now() - t0}ms, ${collection.length} decoration(s); report opened in a new editor`);
 		log.info(report);
 		// The Positron log is hard to find in a dev build, so also show the report as text.
-		await editorService.openEditor({ resource: undefined, contents: report, languageId: 'plaintext' });
+		await editorService.openEditor({ resource: undefined, contents: report, languageId: 'plaintext' }, SIDE_GROUP);
 	}
 });
