@@ -69,7 +69,7 @@ export function runSpan(
 			done = true;
 			if (timer) { clearTimeout(timer); }
 			store.dispose();
-			resolve({ span, executionId, mode, messages, timeline, value: spanValueFromMessages(messages), totalMs: now() - t0 });
+			resolve({ span, executionId, mode, messages, timeline, value: spanValueFromMessages(messages, {}, { textOnly: true }), totalMs: now() - t0 });
 		};
 		store.add(session.onDidReceiveRuntimeMessageResult(m => {
 			if (m.parent_id === executionId) { note('result'); messages.push({ kind: 'result', data: textData(m.data) }); }
