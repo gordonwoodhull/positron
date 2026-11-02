@@ -19,6 +19,15 @@ export interface InlineExprSpan {
 
 const SPAN_RE = /`\{([A-Za-z][\w.+-]*)\}[ \t]+([^`\n]+?)`/g;
 
+/** True if the character at `index` is preceded by an odd number of backslashes. */
+function isEscaped(text: string, index: number): boolean {
+	let n = 0;
+	while (index - n - 1 >= 0 && text[index - n - 1] === '\\') {
+		n++;
+	}
+	return n % 2 === 1;
+}
+
 /**
  * Find inline expression spans, skipping fenced code blocks.
  * Only spans in `language` are returned (the document's primary kernel language).
@@ -40,6 +49,12 @@ export function findInlineExprSpans(lines: readonly string[], language: string):
 		}
 		for (const m of text.matchAll(SPAN_RE)) {
 			if (m[1].toLowerCase() !== language.toLowerCase()) {
+				continue;
+			}
+			// A backslash-escaped opening backtick is a literal character, not a span
+			// opener. Only the opener is checked: inside a code span a backslash is
+			// literal and does not escape the closing backtick.
+			if (isEscaped(text, m.index)) {
 				continue;
 			}
 			out.push({

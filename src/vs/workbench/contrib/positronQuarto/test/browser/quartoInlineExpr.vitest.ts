@@ -29,6 +29,25 @@ describe('findInlineExprSpans', () => {
 	it('requires a space and an expression after the language', () => {
 		expect(find('`{python}` `{python}x`')).toHaveLength(0);
 	});
+
+	it('does not open a span at an escaped backtick', () => {
+		expect(find('\\`{python} 1\\`')).toHaveLength(0);
+		expect(find('\\`{python} 1`')).toHaveLength(0);
+	});
+
+	it('opens a span after an escaped backslash (even run of backslashes)', () => {
+		const spans = find('\\\\`{python} 1`');
+		expect(spans.map(s => s.code)).toEqual(['1']);
+		expect(spans[0].startColumn).toBe(3);
+	});
+
+	it('still finds a real span next to an escaped one', () => {
+		expect(find('\\`{python} 1\\` and `{python} 2`').map(s => s.code)).toEqual(['2']);
+	});
+
+	it('does not treat a backslash inside a span as an escape of the closing backtick', () => {
+		expect(find('`{python} "a\\"`').map(s => s.code)).toEqual(['"a\\"']);
+	});
 });
 
 describe('spanValueFromMessages (last output with a text mime)', () => {
