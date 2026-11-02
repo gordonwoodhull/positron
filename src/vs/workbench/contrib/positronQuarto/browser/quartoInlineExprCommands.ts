@@ -25,6 +25,9 @@ import { findInlineExprSpans } from './quartoInlineExpr.js';
 import { runSpans, SpanRun } from './quartoInlineExprExecutor.js';
 import { QUARTO_CATEGORY } from './quartoCommands.js';
 
+// One collection per editor, so a new run replaces the previous run's values.
+const spikeCollections = new WeakMap<object, { clear(): void }>();
+
 function describeRun(r: SpanRun): string {
 	const kinds = r.timeline.map(t => `${t.kind}@${t.ms}`).join(' ');
 	return `${r.span.line}:${r.span.startColumn} \`${r.span.code}\` -> ${r.value.ok ? JSON.stringify(r.value.text) : 'ERROR ' + r.value.error} [${r.totalMs}ms; ${kinds}]`;
@@ -96,7 +99,9 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 				},
 			};
 		});
+		spikeCollections.get(editor)?.clear();
 		const collection = editor.createDecorationsCollection(decorations);
+		spikeCollections.set(editor, collection);
 		const report = `[spike S3] mode=${mode} spans=${runs.length} total=${Date.now() - t0}ms decorations=${collection.length} uri=${textModel.uri.toString()} firstRange=${collection.getRange(0)?.toString()}\n${runs.map(describeRun).join('\n')}`;
 		notify.info(`[spike S3] done: ${runs.length} span(s) in ${Date.now() - t0}ms, ${collection.length} decoration(s)`);
 		log.info(report);
