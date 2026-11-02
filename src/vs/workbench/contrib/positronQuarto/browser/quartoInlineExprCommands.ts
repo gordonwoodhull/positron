@@ -82,9 +82,10 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 			// allow-any-unicode-next-line
 			const text = r.value.ok ? (r.value.text ?? '') : `⚠ ${r.value.error}`;
 			return {
-				range: new Range(r.span.line, r.span.endColumn, r.span.line, r.span.endColumn),
+				range: new Range(r.span.line, r.span.startColumn, r.span.line, r.span.endColumn),
 				options: {
 					description: 'quarto-spike-inline-expr',
+					className: 'quarto-spike-inline-span',
 					stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
 					after: {
 						// allow-any-unicode-next-line
@@ -95,7 +96,7 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 			};
 		});
 		const collection = editor.createDecorationsCollection(decorations);
-		const report = `[spike S3] mode=${mode} spans=${runs.length} total=${Date.now() - t0}ms decorations=${collection.length}\n${runs.map(describeRun).join('\n')}`;
+		const report = `[spike S3] mode=${mode} spans=${runs.length} total=${Date.now() - t0}ms decorations=${collection.length} uri=${textModel.uri.toString()} firstRange=${collection.getRange(0)?.toString()}\n${runs.map(describeRun).join('\n')}`;
 		notify.info(`[spike S3] done: ${runs.length} span(s) in ${Date.now() - t0}ms, ${collection.length} decoration(s); report opened in a new editor`);
 		log.info(report);
 		// The Positron log is hard to find in a dev build, so also show the report as text.
