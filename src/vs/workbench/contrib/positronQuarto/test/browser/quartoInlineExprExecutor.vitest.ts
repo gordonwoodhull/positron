@@ -69,4 +69,21 @@ describe('runSpans', () => {
 		const runs = await runSpans(s, spans('`{python} a` `{python} b`'), RuntimeCodeExecutionMode.Silent, 'q', () => n++ >= 1);
 		expect(runs).toHaveLength(1);
 	});
+
+	it('stops the batch after a KeyboardInterrupt and leaves later spans unrun', async () => {
+		const s = new FakeSession({
+			'slow': (id, e) => e.err.fire({ parent_id: id, name: 'KeyboardInterrupt', message: '' }),
+		});
+		const runs = await runSpans(s, spans('`{python} 1` `{python} slow` `{python} 2`'), RuntimeCodeExecutionMode.Interactive, 'q');
+		expect(runs.map(r => r.span.code)).toEqual(['1', 'slow']);
+		expect(s.executed.map(e => e.code)).toEqual(['1', 'slow']);
+	});
+
+	it('does not stop the batch for an ordinary error', async () => {
+		const s = new FakeSession({
+			'bad': (id, e) => e.err.fire({ parent_id: id, name: 'NameError', message: 'bad' }),
+		});
+		const runs = await runSpans(s, spans('`{python} bad` `{python} 2`'), RuntimeCodeExecutionMode.Interactive, 'q');
+		expect(runs).toHaveLength(2);
+	});
 });

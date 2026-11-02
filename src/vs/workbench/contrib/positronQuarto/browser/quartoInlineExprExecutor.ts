@@ -97,7 +97,7 @@ export function runSpan(
 	});
 }
 
-/** Run spans strictly one at a time, in the order given (document order). */
+/** Run spans strictly one at a time, in the order given (document order). Stops after an interrupt or timeout. */
 export async function runSpans(
 	session: InlineExprSession,
 	spans: readonly InlineExprSpan[],
@@ -107,7 +107,14 @@ export async function runSpans(
 ): Promise<SpanRun[]> {
 	const runs: SpanRun[] = [];
 	for (let i = 0; i < spans.length && !isCancelled(); i++) {
-		runs.push(await runSpan(session, spans[i], `${idPrefix}-${i + 1}`, mode));
+		const run = await runSpan(session, spans[i], `${idPrefix}-${i + 1}`, mode);
+		runs.push(run);
+		// An interrupt cancels the batch (as it does for queued cells). A timeout means
+		// the kernel stopped answering (for example it was restarted), so the remaining
+		// spans would each wait out their own timeout.
+		if (run.messages.some(m => m.kind === 'error' && (m.name === 'KeyboardInterrupt' || m.name === 'Timeout'))) {
+			break;
+		}
 	}
 	return runs;
 }
