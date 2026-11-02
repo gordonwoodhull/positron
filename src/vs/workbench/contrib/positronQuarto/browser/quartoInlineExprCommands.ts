@@ -82,9 +82,11 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 			// allow-any-unicode-next-line
 			const text = r.value.ok ? (r.value.text ?? '') : `⚠ ${r.value.error}`;
 			return {
-				range: new Range(r.span.line, r.span.endColumn, r.span.line, r.span.endColumn),
+				// A non-empty range: injected text on an empty range did not render in this editor.
+				range: new Range(r.span.line, r.span.startColumn, r.span.line, r.span.endColumn),
 				options: {
 					description: 'quarto-spike-inline-expr',
+					className: 'quarto-spike-inline-span',
 					stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
 					after: {
 						// allow-any-unicode-next-line
