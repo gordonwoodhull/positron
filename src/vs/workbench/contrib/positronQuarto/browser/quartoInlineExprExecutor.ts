@@ -54,6 +54,7 @@ export function runSpan(
 	executionId: string,
 	mode: RuntimeCodeExecutionMode,
 	now: () => number = () => Date.now(),
+	timeoutMs = 20000,
 ): Promise<SpanRun> {
 	return new Promise<SpanRun>(resolve => {
 		const store = new DisposableStore();
@@ -61,7 +62,12 @@ export function runSpan(
 		const timeline: { kind: string; ms: number }[] = [];
 		const t0 = now();
 		const note = (kind: string) => timeline.push({ kind, ms: now() - t0 });
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		let done = false;
 		const finish = () => {
+			if (done) { return; }
+			done = true;
+			if (timer) { clearTimeout(timer); }
 			store.dispose();
 			resolve({ span, executionId, mode, messages, timeline, value: spanValueFromMessages(messages), totalMs: now() - t0 });
 		};
@@ -80,6 +86,10 @@ export function runSpan(
 		store.add(session.onDidReceiveRuntimeMessageState(m => {
 			if (m.parent_id === executionId && m.state === RuntimeOnlineState.Idle) { note('idle'); finish(); }
 		}));
+		timer = setTimeout(() => {
+			messages.push({ kind: 'error', name: 'Timeout', message: `no Idle message within ${timeoutMs}ms` });
+			finish();
+		}, timeoutMs);
 		session.execute(span.code, executionId, mode, RuntimeErrorBehavior.Continue).catch(err => {
 			messages.push({ kind: 'error', name: 'ExecuteRejected', message: String(err) });
 			finish();

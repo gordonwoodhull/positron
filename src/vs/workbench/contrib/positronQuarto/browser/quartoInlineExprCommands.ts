@@ -11,6 +11,7 @@ import { localize2 } from '../../../../nls.js';
 import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
+import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { isCodeEditor } from '../../../../editor/browser/editorBrowser.js';
@@ -45,12 +46,16 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 		const kernelManager = accessor.get(IQuartoKernelManager);
 		const modelService = accessor.get(IQuartoDocumentModelService);
 		const log = accessor.get(ILogService);
+		const notify = accessor.get(INotificationService);
+		const fail = (msg: string) => { log.warn(`[spike S3] ${msg}`); notify.info(`[spike S3] ${msg}`); };
 		if (!isCodeEditor(editor) || !editor.hasModel()) {
+			fail('no active code editor (click into the .qmd editor first)');
 			return;
 		}
 		const textModel = editor.getModel();
 		const language = modelService.getModel(textModel).primaryLanguage;
 		if (!language) {
+			fail('document has no primary language');
 			return;
 		}
 		const spans = findInlineExprSpans(textModel.getLinesContent(), language);
@@ -62,14 +67,18 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 			return;
 		}
 		const mode = pick.label as RuntimeCodeExecutionMode;
+		log.info(`[spike S3] start mode=${mode} language=${language} spans=${spans.length}`);
+		notify.info(`[spike S3] ${mode}: ${spans.length} ${language} span(s); starting kernel`);
 		const session = await kernelManager.ensureKernelForDocument(textModel.uri);
 		if (!session) {
-			log.warn('[spike S3] no kernel session');
+			fail('no kernel session');
 			return;
 		}
+		log.info('[spike S3] kernel ready, executing');
 		const t0 = Date.now();
 		const runs = await runSpans(session, spans, mode, `spike-${generateUuid()}`);
 		const decorations: IModelDeltaDecoration[] = runs.map(r => {
+			// allow-any-unicode-next-line
 			const text = r.value.ok ? (r.value.text ?? '') : `⚠ ${r.value.error}`;
 			return {
 				range: new Range(r.span.line, r.span.endColumn, r.span.line, r.span.endColumn),
@@ -77,6 +86,7 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 					description: 'quarto-spike-inline-expr',
 					stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
 					after: {
+						// allow-any-unicode-next-line
 						content: ` ⟹ ${text.replace(/\s+/g, ' ')}`,
 						inlineClassName: 'quarto-spike-inline-value',
 					},
@@ -84,6 +94,7 @@ registerAction2(class RunInlineExpressionsAction extends Action2 {
 			};
 		});
 		editor.createDecorationsCollection(decorations);
+		notify.info(`[spike S3] done: ${runs.length} span(s) in ${Date.now() - t0}ms`);
 		log.info(`[spike S3] mode=${mode} spans=${runs.length} total=${Date.now() - t0}ms\n${runs.map(describeRun).join('\n')}`);
 	}
 });
